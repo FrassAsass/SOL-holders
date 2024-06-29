@@ -1,0 +1,65 @@
+function getTokenHolders() {
+  const apiKey = "<Your_Helius_Api_Key>"; // Replace with your API key
+  const mintAddress = "Put_Token_Address"; // Replace with your token's mint address
+  const baseUrl = "https://mainnet.helius-rpc.com/?api-key=" + apiKey;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const limit = 1000;
+  let cursor = null;
+  let allOwners = [];
+
+  // Clear existing data starting from row 2
+  sheet.getRange("A2:B").clearContent();
+  // Set headers
+  sheet.getRange("A1:B1").setValues([["Token Holder Addresses", "Balance"]]);
+
+  // Function to fetch token accounts with pagination
+  function fetchTokenAccounts(cursor) {
+    let payload = {
+      jsonrpc: "2.0",
+      id: "helius-test",
+      method: "getTokenAccounts",
+      params: {
+        mint: mintAddress,
+        limit: limit
+      }
+    };
+
+    if (cursor) {
+      payload.params.cursor = cursor;
+    }
+
+    const options = {
+      method: "POST",
+      contentType: "application/json",
+      payload: JSON.stringify(payload)
+    };
+
+    const response = UrlFetchApp.fetch(baseUrl, options);
+    const data = JSON.parse(response.getContentText());
+    return data.result;
+  }
+
+  // Loop to fetch all pages
+  while (true) {
+    const result = fetchTokenAccounts(cursor);
+    if (!result || !result.token_accounts || result.token_accounts.length === 0) {
+      break;
+    }
+
+    result.token_accounts.forEach(account => {
+      if (account.amount > 0) {
+        allOwners.push([account.owner, account.amount]);
+      }
+    });
+
+    if (!result.cursor) {
+      break;
+    }
+    cursor = result.cursor;
+  }
+
+  // Populate data into sheet
+  if (allOwners.length > 0) {
+    sheet.getRange(2, 1, allOwners.length, 2).setValues(allOwners);
+  }
+}

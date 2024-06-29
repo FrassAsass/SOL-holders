@@ -9,3 +9,6 @@ Quick and dirty scripts using Google Sheets to get solana token and NFT holders 
 - Save the Script: Save your script by clicking on the disk icon or Ctrl + S.
 - Run the Script: Click on the run icon (triangle) or select Run > Run function > <scriptname>.
 
+### Helius
+
+- https://www.helius.dev/

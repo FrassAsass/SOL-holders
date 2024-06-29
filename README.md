@@ -1,5 +1,7 @@
 # Solana SPL token and NFT holders
-Quick and dirty scripts using Google Sheets to get solana token and NFT holders into a CSV
+Quick and dirty scripts using Google Sheets to get solana token and NFT holders into a CSV.
+
+This is provided as is, there's no warranty on it's accuracy. Thats up to you to validate, bozo.
 
 ## How to use google sheets script functionality
 

@@ -1,0 +1,88 @@
+function getNFTHoldersByAuthority() {
+  const apiKey = "<Your_API_key>"; // Replace with your API key
+  const authorityAddress = "<Update_Authority>"; // Replace with your authority address (update authority or escrow wallet in case of hybrid)
+  const baseUrl = "https://mainnet.helius-rpc.com/?api-key=" + apiKey;
+  const sheetName = "NFT_Holders"; // Name of the sheet to populate... make sure this sheet exists
+  const limit = 1000;
+  let cursor = null;
+  let allNFTs = [];
+
+  // Get or create the sheet
+  let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(sheetName);
+  }
+
+  // Clear existing data starting from row 2
+  sheet.getRange("A2:C").clearContent();
+  // Set headers
+  sheet.getRange("A1:C1").setValues([["Token Holder Addresses", "Token ID", "Mint Address"]]);
+
+  // Function to fetch assets by authority with pagination
+  function fetchAssetsByAuthority(cursor) {
+    let payload = {
+      jsonrpc: "2.0",
+      id: "helius-test",
+      method: "getAssetsByAuthority",
+      params: {
+        authorityAddress: authorityAddress,
+        limit: limit
+      }
+    };
+
+    if (cursor) {
+      payload.params.cursor = cursor;
+    }
+
+    const options = {
+      method: "POST",
+      contentType: "application/json",
+      payload: JSON.stringify(payload)
+    };
+
+    const response = UrlFetchApp.fetch(baseUrl, options);
+    const data = JSON.parse(response.getContentText());
+    Logger.log("API Response: " + JSON.stringify(data)); // Log the response for debugging
+    return data.result;
+  }
+
+  // Loop to fetch all pages
+  while (true) {
+    const result = fetchAssetsByAuthority(cursor);
+    Logger.log("Page Result: " + JSON.stringify(result)); // Log the result for debugging
+    if (!result || !result.items || result.items.length === 0) {
+      break;
+    }
+
+    allNFTs.push(...result.items);
+
+    if (!result.cursor) {
+      break;
+    }
+    cursor = result.cursor;
+  }
+
+  // Map to track unique holders and their counts
+  const holderMap = new Map();
+
+  // Process all NFTs to identify unique holders
+  allNFTs.forEach(nft => {
+    const owner = nft.ownership?.owner || "Unknown"; // Adjust based on actual response structure
+    if (holderMap.has(owner)) {
+      holderMap.set(owner, holderMap.get(owner) + 1);
+    } else {
+      holderMap.set(owner, 1);
+    }
+  });
+
+  // Convert map to array for sheet population
+  const holderArray = Array.from(holderMap, ([address, total]) => [address, total]);
+
+  // Log holderArray for debugging
+  Logger.log("Holder Array: " + JSON.stringify(holderArray));
+
+  // Populate data into sheet
+  if (holderArray.length > 0) {
+    sheet.getRange(2, 1, holderArray.length, 2).setValues(holderArray);
+  }
+}
